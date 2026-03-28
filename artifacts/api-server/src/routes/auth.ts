@@ -75,6 +75,33 @@ router.get("/me", async (req, res) => {
   }
 });
 
+router.put("/profile", async (req, res) => {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { name, phone, address } = req.body;
+    const [user] = await db
+      .update(usersTable)
+      .set({ name, phone, address })
+      .where(eq(usersTable.id, userId))
+      .returning();
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json(formatUser(user));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 function formatUser(user: typeof usersTable.$inferSelect) {
   return {
     id: user.id,
